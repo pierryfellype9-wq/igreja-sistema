@@ -48,19 +48,26 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath =
-    process.env.NODE_ENV === "development"
-      ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
+  // Em produção, servir arquivos da pasta dist/public
+  const distPath = path.resolve(import.meta.dirname, "../../dist/public");
+  
   if (!fs.existsSync(distPath)) {
     console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
+      `❌ Build directory not found: ${distPath}\n` +
+      `Make sure to run: pnpm build`
     );
+    process.exit(1);
   }
 
-  app.use(express.static(distPath));
+  console.log(`📁 Serving static files from: ${distPath}`);
 
-  // fall through to index.html if the file doesn't exist
+  // Servir arquivos estáticos com cache
+  app.use(express.static(distPath, {
+    maxAge: "1d",
+    etag: false,
+  }));
+
+  // Servir index.html para rotas não encontradas (SPA)
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
